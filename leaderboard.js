@@ -24,28 +24,14 @@ export async function submitScore(lastGameData, onSuccess, onError) {
             gameDataToStore.replayUrl = null;
         }
 
-        const userRecords = await new Promise(resolve => {
-            const collection = room.collection('leaderboard_scores_v1').filter({ username: currentUser.username });
-            let unsubscribe;
+        const collection = room.collection('leaderboard_scores_v1');
+        const userRecord = await collection.findOne({ username: currentUser.username });
 
-            const timeout = setTimeout(() => {
-                if (unsubscribe) unsubscribe();
-                resolve(collection.getList());
-            }, 2000);
-
-            unsubscribe = collection.subscribe(records => {
-                clearTimeout(timeout);
-                if (unsubscribe) unsubscribe();
-                resolve(records);
-            });
-        });
-
-        if (userRecords && userRecords.length > 0) {
-            const userRecord = userRecords[0];
+        if (userRecord) {
             const updatedScores = [...(userRecord.scores || []), gameDataToStore];
-            await room.collection('leaderboard_scores_v1').update(userRecord.id, { scores: updatedScores });
+            await collection.update(userRecord.id, { scores: updatedScores });
         } else {
-            await room.collection('leaderboard_scores_v1').create({
+            await collection.create({
                 scores: [gameDataToStore]
             });
         }
